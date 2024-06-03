@@ -8,6 +8,8 @@ const fs = require("fs").promises;
 
 const filePath = "data.json";
 let enabled = false;
+let number_of_no_appointments_available = 0;
+let number_of_no_appointments_criteria = 0;
 
 async function storeSet(key, value) {
   const current_data = await fs.readFile(filePath, "utf8");
@@ -302,6 +304,15 @@ async function bot() {
         msg.chat.id,
         `Bot is online. Scheduler running: ${enabled}`
       );
+
+      if (enabled) {
+        await bot.sendMessage(
+          msg.chat.id,
+          "Number of attempted bookings: " +
+            `No appointments available: ${number_of_no_appointments_available}\n` +
+            `No appointments available for criteria: ${number_of_no_appointments_criteria}`
+        );
+      }
     }
   });
 
@@ -488,10 +499,20 @@ async function bot() {
 }
 
 async function appointmentScheduler(sendMessage) {
+  number_of_no_appointments_available = 0;
+  number_of_no_appointments_criteria = 0;
   while (enabled) {
     try {
       const result = await newAppointment();
-      sendMessage(result);
+
+      if (result === "No free appointments available") {
+        number_of_no_appointments_available++;
+      } else if (result === "No appointments available for criteria") {
+        number_of_no_appointments_criteria++;
+      } else {
+        sendMessage(result);
+      }
+
       if (
         result.includes("Appointment booked") ||
         result.includes("Missing configuration")
